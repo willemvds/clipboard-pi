@@ -3,6 +3,13 @@ const sdl3 = @cImport({
     @cInclude("SDL3/SDL.h");
 });
 
+pub fn handleClipboardEvent(ev: sdl3.SDL_ClipboardEvent) void {
+    std.debug.print("clipboard event = {}\n", .{ev});
+    for (0..@intCast(ev.n_mime_types)) |idx| {
+        std.debug.print("mime type #{d} = {s}\n", .{ idx, ev.mime_types[idx] });
+    }
+}
+
 pub fn main() !void {
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
@@ -55,6 +62,10 @@ pub fn main() !void {
                     if (kdev.key == sdl3.SDLK_ESCAPE) {
                         quit = true;
                     }
+                },
+                sdl3.SDL_EVENT_CLIPBOARD_UPDATE => {
+                    const cbev: sdl3.SDL_ClipboardEvent = e.clipboard;
+                    handleClipboardEvent(cbev);
                 },
                 else => {},
             }
