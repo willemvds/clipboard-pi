@@ -1,6 +1,7 @@
 const std = @import("std");
 const sdl3 = @cImport({
     @cInclude("SDL3/SDL.h");
+    @cInclude("SDL3_ttf/SDL_ttf.h");
 });
 
 pub fn handleClipboardEvent(ev: sdl3.SDL_ClipboardEvent) void {
@@ -46,9 +47,35 @@ pub fn main() !void {
         return error.SDL;
     }
 
+    if (sdl3.TTF_Init() == false) {
+        std.debug.print("SDL_ttf init err = {s}\n", .{sdl3.SDL_GetError()});
+        return error.SDL;
+    }
+
+    //    const SDL_CLOSE_IO = true;
+    const uiFont = sdl3.TTF_OpenFont("/home/willem/Downloads/SourceCodePro/SauceCodeProNerdFont-Regular.ttf", 24);
+    if (uiFont == null) {
+        std.debug.print("font loading err = {s}\n", .{sdl3.SDL_GetError()});
+        return error.SDL;
+    }
+
+    const tempText = sdl3.SDL_CreateSurface(600, 200, sdl3.SDL_PIXELFORMAT_RGBA32);
+    if (tempText == null) {
+        std.debug.print("create surface err = {s}\n", .{sdl3.SDL_GetError()});
+        return error.SDL;
+    }
+
+    const green = sdl3.SDL_Color{ .r = 0, .g = 255, .b = 0, .a = 255 };
+
     var quit = false;
     while (!quit) {
         _ = sdl3.SDL_RenderClear(renderer);
+        const msg = "Clipboard Private Investigator \u{f408}  ";
+        const textSurface = sdl3.TTF_RenderText_Blended(uiFont, msg, msg.len, green);
+        const textTex = sdl3.SDL_CreateTextureFromSurface(renderer, textSurface);
+        sdl3.SDL_DestroySurface(textSurface);
+        const targetRect = sdl3.SDL_FRect{ .w = 1200.0, .h = 100.0 };
+        _ = sdl3.SDL_RenderTexture(renderer, textTex, null, &targetRect);
         _ = sdl3.SDL_RenderPresent(renderer);
 
         var e: sdl3.SDL_Event = undefined;
