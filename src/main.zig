@@ -4,11 +4,31 @@ const sdl3 = @cImport({
     @cInclude("SDL3_ttf/SDL_ttf.h");
 });
 
-pub fn handleClipboardEvent(ev: sdl3.SDL_ClipboardEvent) void {
+const HandleClipboardEventResult = struct {
+    textures: std.ArrayList(*sdl3.SDL_Texture),
+};
+
+pub fn handleClipboardEvent(
+    a: std.mem.Allocator,
+    ev: sdl3.SDL_ClipboardEvent,
+    renderer: *sdl3.SDL_Renderer,
+    font: *sdl3.TTF_Font,
+) !HandleClipboardEventResult {
     std.debug.print("clipboard event = {}\n", .{ev});
-    for (0..@intCast(ev.n_mime_types)) |idx| {
+
+    const numMimeTypes: usize = @intCast(ev.n_mime_types);
+    const green = sdl3.SDL_Color{ .r = 0, .g = 255, .b = 0, .a = 255 };
+    var textures = try std.ArrayList(*sdl3.SDL_Texture).initCapacity(a, numMimeTypes);
+
+    for (0..numMimeTypes) |idx| {
         std.debug.print("mime type #{d} = {s}\n", .{ idx, ev.mime_types[idx] });
+        const mimeLabelTexture = try createTextTexture(renderer, font, green, std.mem.span(ev.mime_types[idx]));
+        try textures.append(mimeLabelTexture);
     }
+
+    return HandleClipboardEventResult{
+        .textures = textures,
+    };
 }
 
 pub fn createTextTexture(
@@ -24,6 +44,9 @@ pub fn createTextTexture(
 }
 
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const ally = gpa.allocator();
+
     const stdout_file = std.io.getStdOut().writer();
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
@@ -74,11 +97,25 @@ pub fn main() !void {
         const msg = "Clipboard Private Investigator \u{f408}  ";
         const msgTex = try createTextTexture(renderer, uiFont, green, msg);
 
+        var labelTextures = try std.ArrayList(*sdl3.SDL_Texture).initCapacity(ally, 0);
+
         var quit = false;
         while (!quit) {
             _ = sdl3.SDL_RenderClear(renderer);
             const targetRect = sdl3.SDL_FRect{ .w = @floatFromInt(msgTex.w), .h = @floatFromInt(msgTex.h) };
             _ = sdl3.SDL_RenderTexture(renderer, msgTex, null, &targetRect);
+
+            for (labelTextures.items, 0..) |labelTexture, idx| {
+                const y: f32 = @floatFromInt(idx * @as(usize, @intCast(labelTexture.h)));
+                const tr = sdl3.SDL_FRect{
+                    .x = 10.0,
+                    .y = 100.0 + y,
+                    .w = @floatFromInt(labelTexture.w),
+                    .h = @floatFromInt(labelTexture.h),
+                };
+                _ = sdl3.SDL_RenderTexture(renderer, labelTexture, null, &tr);
+            }
+
             _ = sdl3.SDL_RenderPresent(renderer);
 
             var e: sdl3.SDL_Event = undefined;
@@ -95,7 +132,8 @@ pub fn main() !void {
                     },
                     sdl3.SDL_EVENT_CLIPBOARD_UPDATE => {
                         const cbev: sdl3.SDL_ClipboardEvent = e.clipboard;
-                        handleClipboardEvent(cbev);
+                        const cbResult = try handleClipboardEvent(ally, cbev, renderer, uiFont);
+                        labelTextures = cbResult.textures;
                     },
                     else => {},
                 }
