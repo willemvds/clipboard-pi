@@ -28,9 +28,8 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(stdout_file);
     const stdout = bw.writer();
 
-    try bw.flush(); // don't forget to flush!
-
     try stdout.print("Clipboard PI\n", .{});
+    try bw.flush(); // don't forget to flush!
 
     if (sdl3.SDL_Init(sdl3.SDL_INIT_VIDEO) == false) {
         std.debug.print("SDL init err = {s}\n", .{sdl3.SDL_GetError()});
