@@ -6,4 +6,5 @@ Clipboard Private Investigator
 - Keep history and persist to disk.
 - Ability to self-install on supported operating systems.
 - Statically linked portable version.
+- TOML config for persisting settings (like window size/position and keybinds).
 
