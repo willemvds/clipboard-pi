@@ -91,15 +91,34 @@ pub fn main() !void {
         return;
     }
 
-    const window_w: c_int = 1920;
-    const window_h: c_int = 1080;
+    const primaryDisplayId = sdl3.SDL_GetPrimaryDisplay();
+    if (primaryDisplayId == 0) {
+        return error.SDL;
+    }
+    const desktopDisplayMode = sdl3.SDL_GetDesktopDisplayMode(primaryDisplayId) orelse {
+        return error.SDL;
+    };
+
+    std.debug.print("primary display mode: id={d} pixel_format={} w={d} h={d} pixel_density={d} refresh_rate={d}\n", .{
+        desktopDisplayMode.*.displayID,
+        desktopDisplayMode.*.format,
+        desktopDisplayMode.*.w,
+        desktopDisplayMode.*.h,
+        desktopDisplayMode.*.pixel_density,
+        desktopDisplayMode.*.refresh_rate,
+    });
+
+    const window_w: c_int = desktopDisplayMode.*.w - 300;
+    const window_h: c_int = desktopDisplayMode.*.h - 300;
     const window_title = "Clipboard PI";
     const window_flags =
-        sdl3.SDL_WINDOW_BORDERLESS |
+        //        sdl3.SDL_WINDOW_BORDERLESS |
+        sdl3.SDL_WINDOW_TRANSPARENT |
         sdl3.SDL_WINDOW_INPUT_FOCUS |
         sdl3.SDL_WINDOW_RESIZABLE;
 
     const createWindowAndRendererResult = try createWindowAndRenderer(window_w, window_h, window_title, window_flags);
+    //    const window = createWindowAndRendererResult.window;
     const renderer = createWindowAndRendererResult.renderer;
 
     if (sdl3.TTF_Init() == false) {
@@ -118,6 +137,9 @@ pub fn main() !void {
     const msgTex = try createTextTexture(renderer, uiFont, green, msg);
 
     var labelTextures = try std.ArrayList(*sdl3.SDL_Texture).initCapacity(ally, 0);
+
+    _ = sdl3.SDL_SetRenderDrawColor(renderer, 0, 0, 0, sdl3.SDL_ALPHA_TRANSPARENT);
+    _ = sdl3.SDL_SetRenderDrawBlendMode(renderer, sdl3.SDL_BLENDMODE_BLEND);
 
     var quit = false;
     while (!quit) {
