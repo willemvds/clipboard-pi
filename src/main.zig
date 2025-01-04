@@ -4,6 +4,10 @@ const sdl3 = @cImport({
     @cInclude("SDL3_ttf/SDL_ttf.h");
 });
 
+const BYTE = 1;
+const KB = 1000 * BYTE;
+const MB = 1000 * KB;
+
 const HandleClipboardEventResult = struct {
     textures: std.ArrayList(*sdl3.SDL_Texture),
 };
@@ -126,8 +130,17 @@ pub fn main() !void {
         return error.SDL;
     }
 
-    //    const SDL_CLOSE_IO = true;
-    const uiFont = sdl3.TTF_OpenFont("/home/willem/Downloads/SourceCodePro/SauceCodeProNerdFont-Regular.ttf", 24) orelse {
+    const env_map = try std.process.getEnvMap(ally);
+    const home_path = env_map.get("HOME") orelse ".";
+    const font_path = try std.fs.path.join(ally, &[_][]const u8{ home_path, "projects/clipboard-pi/SauceCodeProNerdFontMono-Regular.ttf" });
+    const target_fh = try std.fs.openFileAbsolute(font_path, .{});
+    const contents = try target_fh.readToEndAlloc(ally, 2 * MB);
+    const contents_sdl = sdl3.SDL_IOFromConstMem(@ptrCast(contents), contents.len);
+    if (contents_sdl == null) {
+        return error.SDL;
+    }
+    const SDL_CLOSE_IO = true;
+    const uiFont = sdl3.TTF_OpenFontIO(contents_sdl, SDL_CLOSE_IO, 24) orelse {
         std.debug.print("font loading err = {s}\n", .{sdl3.SDL_GetError()});
         return error.SDL;
     };
