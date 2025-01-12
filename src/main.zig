@@ -8,6 +8,8 @@ const BYTE = 1;
 const KB = 1000 * BYTE;
 const MB = 1000 * KB;
 
+const SAUCE_CODE_FONT = @embedFile("embed/SauceCodeProNerdFontMono-Regular.ttf");
+
 const HandleClipboardEventResult = struct {
     textures: std.ArrayList(*sdl3.SDL_Texture),
 };
@@ -130,12 +132,7 @@ pub fn main() !void {
         return error.SDL;
     }
 
-    const env_map = try std.process.getEnvMap(ally);
-    const home_path = env_map.get("HOME") orelse ".";
-    const font_path = try std.fs.path.join(ally, &[_][]const u8{ home_path, "projects/clipboard-pi/SauceCodeProNerdFontMono-Regular.ttf" });
-    const target_fh = try std.fs.openFileAbsolute(font_path, .{});
-    const contents = try target_fh.readToEndAlloc(ally, 2 * MB);
-    const contents_sdl = sdl3.SDL_IOFromConstMem(@ptrCast(contents), contents.len);
+    const contents_sdl = sdl3.SDL_IOFromConstMem(SAUCE_CODE_FONT, SAUCE_CODE_FONT.len);
     if (contents_sdl == null) {
         return error.SDL;
     }
